@@ -82,7 +82,7 @@ class AppSettings:
 def load_flexible_model(model_path, device):
     """Carga el modelo de forma flexible, intentando diferentes enfoques"""
     try:
-        # Agregar weights_only=True para evitar el warning
+        # Agregar weights_only=False para evitar el warning
         checkpoint = torch.load(model_path, map_location=device, weights_only=False)
         
         if isinstance(checkpoint, dict) and 'state_dict' in checkpoint:
@@ -159,51 +159,57 @@ class InicioPage(ctk.CTkFrame):
         self.db = DatabaseManager()
         
         self.configure(fg_color="transparent")
-        self.pack(fill="both", expand=True, padx=50, pady=50)
+        self.pack(fill="both", expand=True, padx=20, pady=20)
         
         self.setup_ui()
     
     def setup_ui(self):
-        """Interfaz de búsqueda de RUT"""
-        title = ctk.CTkLabel(
-            self, 
-            text="🏥 Sistema de Detección de Melanoma", 
-            font=("Arial", 24, "bold")
-        )
-        title.pack(pady=20)
+        """Interfaz de búsqueda de RUT - MEJORADA"""
+        # Frame principal con scroll
+        main_frame = ctk.CTkScrollableFrame(self, orientation="vertical")
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
         
-        rut_frame = ctk.CTkFrame(self)
+        title = ctk.CTkLabel(
+            main_frame, 
+            text="🏥 Sistema de Detección de Melanoma", 
+            font=("Arial", 28, "bold")
+        )
+        title.pack(pady=30)
+        
+        rut_frame = ctk.CTkFrame(main_frame)
         rut_frame.pack(pady=30, fill="x", padx=100)
         
         ctk.CTkLabel(
             rut_frame, 
             text="Ingrese RUT del Paciente:", 
-            font=("Arial", 16)
-        ).pack(pady=10)
+            font=("Arial", 18)
+        ).pack(pady=15)
         
         self.rut_entry = ctk.CTkEntry(
             rut_frame,
             placeholder_text="Ej: 12345678-9",
-            font=("Arial", 14),
-            width=200
+            font=("Arial", 16),
+            width=250,
+            height=40
         )
-        self.rut_entry.pack(pady=10)
+        self.rut_entry.pack(pady=15)
         self.rut_entry.bind("<Return>", lambda e: self.buscar_paciente())
         
         self.buscar_btn = ctk.CTkButton(
             rut_frame,
             text="Buscar Paciente",
             command=self.buscar_paciente,
-            font=("Arial", 14)
+            font=("Arial", 16),
+            height=45
         )
-        self.buscar_btn.pack(pady=10)
+        self.buscar_btn.pack(pady=15)
         
         self.resultado_label = ctk.CTkLabel(
             rut_frame,
             text="",
-            font=("Arial", 12)
+            font=("Arial", 14)
         )
-        self.resultado_label.pack(pady=10)
+        self.resultado_label.pack(pady=15)
     
     def buscar_paciente(self):
         """Buscar paciente en la base de datos"""
@@ -233,14 +239,18 @@ class InicioPage(ctk.CTkFrame):
             self.mostrar_registro_paciente(rut)
     
     def mostrar_historial_paciente(self, paciente):
-        """Mostrar historial del paciente existente - COMPLETAMENTE CORREGIDO"""
+        """Mostrar historial del paciente existente - MEJORADA CON SCROLL"""
         for widget in self.winfo_children():
             widget.destroy()
         
+        # Frame principal con scroll
+        main_frame = ctk.CTkScrollableFrame(self, orientation="vertical")
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
         title = ctk.CTkLabel(
-            self, 
+            main_frame, 
             text=f"📋 Historial de {paciente['nombre']} {paciente['apellido']}", 
-            font=("Arial", 20, "bold")
+            font=("Arial", 24, "bold")
         )
         title.pack(pady=20)
         
@@ -249,63 +259,82 @@ class InicioPage(ctk.CTkFrame):
         
         if consultas_completas:
             ctk.CTkLabel(
-                self,
+                main_frame,
                 text=f"📊 {len(consultas_completas)} consulta(s) encontrada(s)",
-                font=("Arial", 14)
+                font=("Arial", 16)
             ).pack(pady=10)
             
             for consulta in consultas_completas:
-                consulta_frame = ctk.CTkFrame(self, fg_color="#2b2b2b")
-                consulta_frame.pack(fill="x", padx=50, pady=8)
+                consulta_frame = ctk.CTkFrame(main_frame, fg_color="#2b2b2b")
+                consulta_frame.pack(fill="x", padx=20, pady=10)
                 
                 # Información de la consulta
                 info_text = f"📅 Consulta del {consulta['fecha_consulta']} - Localización: {consulta['localizacion_lesion']}"
                 if consulta['notas_consulta']:
-                    info_text += f" - 📝 Notas: {consulta['notas_consulta']}"
+                    info_text += f"\n📝 Notas generales: {consulta['notas_consulta']}"
                 
                 ctk.CTkLabel(
                     consulta_frame,
                     text=info_text,
-                    font=("Arial", 12, "bold"),
-                    wraplength=800
-                ).pack(anchor="w", padx=10, pady=5)
+                    font=("Arial", 14, "bold"),
+                    wraplength=1000,
+                    justify="left"
+                ).pack(anchor="w", padx=15, pady=10)
                 
                 # Mostrar imágenes de esta consulta
                 if consulta['imagenes']:
                     for img in consulta['imagenes']:
                         img_frame = ctk.CTkFrame(consulta_frame, fg_color="#3b3b3b")
-                        img_frame.pack(fill="x", padx=20, pady=2)
+                        img_frame.pack(fill="x", padx=25, pady=5)
                         
                         img_text = f"  📷 {img['nombre_archivo']} - Diagnóstico: {img['diagnostico']} (Confianza: {img['confianza']:.2%})"
+                        if img['notas_imagen']:
+                            img_text += f"\n     📝 Notas: {img['notas_imagen']}"
+                        
                         ctk.CTkLabel(
                             img_frame,
                             text=img_text,
-                            font=("Arial", 10),
-                            wraplength=750
-                        ).pack(anchor="w", padx=10, pady=2)
+                            font=("Arial", 12),
+                            wraplength=900,
+                            justify="left"
+                        ).pack(anchor="w", padx=15, pady=8)
                 else:
                     ctk.CTkLabel(
                         consulta_frame,
                         text="  No hay imágenes en esta consulta",
-                        font=("Arial", 10),
+                        font=("Arial", 12),
                         text_color="gray"
-                    ).pack(anchor="w", padx=20, pady=2)
+                    ).pack(anchor="w", padx=25, pady=5)
+        
         else:
             ctk.CTkLabel(
-                self,
+                main_frame,
                 text="No hay consultas previas registradas",
-                font=("Arial", 12),
+                font=("Arial", 16),
                 text_color="gray"
-            ).pack(pady=20)
+            ).pack(pady=30)
+        
+        # Botón fijo en la parte inferior
+        btn_frame = ctk.CTkFrame(self)
+        btn_frame.pack(fill="x", padx=20, pady=10)
         
         ctk.CTkButton(
-            self,
+            btn_frame,
             text="🩺 Realizar Nuevo Diagnóstico",
             command=lambda: self.ir_a_analisis(paciente),
+            font=("Arial", 18),
+            height=50
+        ).pack(pady=10)
+        
+        ctk.CTkButton(
+            btn_frame,
+            text="🔍 Buscar Otro Paciente",
+            command=self.app.mostrar_inicio_page,
             font=("Arial", 16),
-            height=40
-        ).pack(pady=30)
-    
+            height=40,
+            fg_color="gray"
+        ).pack(pady=5)
+
     def mostrar_registro_paciente(self, rut):
         """Mostrar formulario de registro para nuevo paciente"""
         for widget in self.winfo_children():
@@ -513,12 +542,12 @@ class InicioPage(ctk.CTkFrame):
         self.app.mostrar_analisis_page(paciente)
 
 class AnalisisFotoPage(ctk.CTkFrame):
-    def __init__(self, master, paciente, db, app_instance):  # CORREGIDO: agregar app_instance
+    def __init__(self, master, paciente, db, app_instance):
         super().__init__(master)
         
         self.paciente = paciente
         self.db = db
-        self.app = app_instance  # CORREGIDO: guardar referencia a app
+        self.app = app_instance
         self.app_settings = AppSettings()
         self.textFont = self.app_settings.textFont
         self.fontSize = self.app_settings.fontSize
@@ -527,9 +556,10 @@ class AnalisisFotoPage(ctk.CTkFrame):
         self.model_path = None
         self.image_path = None
         self.current_image = None
-        self.id_consulta_actual = None  # Para manejar una sola consulta
-        self.consulta_iniciada = False  # Controlar si ya se creó una consulta
-        self.texto_placeholder_activo = True
+        self.id_consulta_actual = None
+        self.consulta_iniciada = False
+        self.texto_placeholder_general = True
+        self.texto_placeholder_imagen = True
         
         self.transform = transforms.Compose([
             transforms.Resize((64, 64)),
@@ -543,7 +573,7 @@ class AnalisisFotoPage(ctk.CTkFrame):
         self.try_auto_load_model()
     
     def setup_ui(self):
-        """Configurar interfaz de usuario con nueva lógica de dos botones"""
+        """Configurar interfaz de usuario - NUEVA DISTRIBUCIÓN IZQUIERDA/DERECHA"""
         # Información del paciente
         info_paciente = ctk.CTkFrame(self)
         info_paciente.pack(fill="x", pady=10)
@@ -551,8 +581,8 @@ class AnalisisFotoPage(ctk.CTkFrame):
         ctk.CTkLabel(
             info_paciente,
             text=f"Paciente: {self.paciente['nombre']} {self.paciente['apellido']} - RUT: {self.paciente['rut']}",
-            font=(self.textFont, 14, "bold")
-        ).pack(pady=5)
+            font=(self.textFont, 16, "bold")
+        ).pack(pady=8)
         
         # Información de la consulta actual
         self.info_consulta_frame = ctk.CTkFrame(self)
@@ -561,102 +591,118 @@ class AnalisisFotoPage(ctk.CTkFrame):
         self.info_consulta_label = ctk.CTkLabel(
             self.info_consulta_frame,
             text="🆕 Consulta no iniciada - Complete la información de la consulta",
-            font=(self.textFont, 12),
+            font=(self.textFont, 14),
             text_color="orange"
         )
-        self.info_consulta_label.pack(pady=5)
+        self.info_consulta_label.pack(pady=8)
         
-        # Título
-        title = ctk.CTkLabel(
-            self, 
-            text="🔬 Detector de Melanoma", 
-            font=(self.textFont, 24, "bold")
-        )
-        title.pack(pady=10)
-        
-        # Contenedor principal
-        main_container = ctk.CTkScrollableFrame(self, height=600)
+        # Contenedor principal dividido en izquierda y derecha
+        main_container = ctk.CTkFrame(self)
         main_container.pack(fill="both", expand=True, pady=10)
         
+        # Configurar grid para división 50/50
+        main_container.grid_columnconfigure(0, weight=1)
+        main_container.grid_columnconfigure(1, weight=1)
+        main_container.grid_rowconfigure(0, weight=1)
+        
+        # ==================== COLUMNA IZQUIERDA ====================
+        left_frame = ctk.CTkFrame(main_container)
+        left_frame.grid(row=0, column=0, padx=(0, 10), pady=0, sticky="nsew")
+        
         # ==================== PASO 1: CARGAR MODELO ====================
-        step1_frame = ctk.CTkFrame(main_container)
-        step1_frame.pack(fill="x", padx=10, pady=5)
+        step1_frame = ctk.CTkFrame(left_frame)
+        step1_frame.pack(fill="x", padx=10, pady=10)
         
         ctk.CTkLabel(step1_frame, text="1. Cargar Modelo Entrenado", 
-                   font=(self.textFont, 16, "bold")).pack(anchor="w", padx=10, pady=5)
+                   font=(self.textFont, 18, "bold")).pack(anchor="w", padx=10, pady=10)
         
         self.load_btn = ctk.CTkButton(
             step1_frame,
             text="Seleccionar Modelo",
             command=self.cargar_modelo,
-            font=(self.textFont, self.fontSize)
+            font=(self.textFont, self.fontSize),
+            height=40
         )
-        self.load_btn.pack(pady=10, padx=10)
+        self.load_btn.pack(pady=15, padx=10, fill="x")
         
         self.model_status = ctk.CTkLabel(
             step1_frame, 
             text="⏳ Esperando modelo...", 
             text_color="orange",
-            font=(self.textFont, 12)
+            font=(self.textFont, 14)
         )
-        self.model_status.pack(pady=5)
+        self.model_status.pack(pady=10)
         
         # ==================== PASO 2: ANALIZAR IMAGEN ====================
-        step2_frame = ctk.CTkFrame(main_container)
-        step2_frame.pack(fill="x", padx=10, pady=5)
+        step2_frame = ctk.CTkFrame(left_frame)
+        step2_frame.pack(fill="x", padx=10, pady=10)
         
         ctk.CTkLabel(step2_frame, text="2. Analizar Imagen", 
-                   font=(self.textFont, 16, "bold")).pack(anchor="w", padx=10, pady=5)
+                   font=(self.textFont, 18, "bold")).pack(anchor="w", padx=10, pady=10)
         
         self.image_btn = ctk.CTkButton(
             step2_frame,
             text="Seleccionar Imagen",
             command=self.seleccionar_imagen,
             state="disabled",
-            font=(self.textFont, self.fontSize)
+            font=(self.textFont, self.fontSize),
+            height=40
         )
-        self.image_btn.pack(pady=10, padx=10)
+        self.image_btn.pack(pady=15, padx=10, fill="x")
         
-        self.preview_frame = ctk.CTkFrame(step2_frame, height=200)
-        self.preview_frame.pack(pady=10, padx=10, fill="x")
+        # Vista previa de imagen
+        preview_container = ctk.CTkFrame(step2_frame)
+        preview_container.pack(fill="x", padx=10, pady=10)
+        
+        ctk.CTkLabel(preview_container, text="Vista Previa:", 
+                   font=(self.textFont, 14, "bold")).pack(anchor="w", pady=5)
+        
+        self.preview_frame = ctk.CTkFrame(preview_container, height=250)
+        self.preview_frame.pack(fill="x", pady=10)
         self.preview_frame.pack_propagate(False)
         
         self.preview_label = ctk.CTkLabel(
             self.preview_frame, 
             text="Imagen no seleccionada",
             text_color="gray",
-            font=(self.textFont, 10)
+            font=(self.textFont, 12)
         )
-        self.preview_label.pack(pady=20)
+        self.preview_label.pack(expand=True)
+        
+        # ==================== COLUMNA DERECHA ====================
+        right_frame = ctk.CTkFrame(main_container)
+        right_frame.grid(row=0, column=1, padx=(10, 0), pady=0, sticky="nsew")
         
         # ==================== PASO 3: RESULTADOS ====================
-        step3_frame = ctk.CTkFrame(main_container)
-        step3_frame.pack(fill="x", padx=10, pady=5)
+        step3_frame = ctk.CTkFrame(right_frame)
+        step3_frame.pack(fill="x", padx=10, pady=10)
 
         ctk.CTkLabel(step3_frame, text="3. Resultados", 
-                font=(self.textFont, 16, "bold")).pack(anchor="w", padx=10, pady=5)
+                font=(self.textFont, 18, "bold")).pack(anchor="w", padx=10, pady=10)
 
-        self.results_frame = ctk.CTkFrame(step3_frame)
-        self.results_frame.pack(pady=10, padx=10, fill="x")
+        self.results_frame = ctk.CTkFrame(step3_frame, height=120)
+        self.results_frame.pack(fill="x", padx=10, pady=10)
+        self.results_frame.pack_propagate(False)
         
         self.result_label = ctk.CTkLabel(
             self.results_frame, 
             text="Seleccione y analice una imagen para ver resultados",
-            font=(self.textFont, 14),
-            text_color="gray"
+            font=(self.textFont, 16),
+            text_color="gray",
+            wraplength=400
         )
-        self.result_label.pack(pady=10)
+        self.result_label.pack(expand=True, pady=20)
         
         # ==================== PASO 4: INFORMACIÓN DE LA CONSULTA ====================
-        step4_frame = ctk.CTkFrame(main_container)
-        step4_frame.pack(fill="x", padx=10, pady=5)
+        step4_frame = ctk.CTkFrame(right_frame)
+        step4_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
         ctk.CTkLabel(step4_frame, text="4. Información de la Consulta", 
-                   font=(self.textFont, 16, "bold")).pack(anchor="w", padx=10, pady=5)
+                   font=(self.textFont, 18, "bold")).pack(anchor="w", padx=10, pady=10)
         
         # Localización de la lesión
         ctk.CTkLabel(step4_frame, text="Localización de la lesión:", 
-                   font=(self.textFont, 12)).pack(anchor="w", padx=10)
+                   font=(self.textFont, 14)).pack(anchor="w", padx=10, pady=(5,0))
         
         self.localizacion_combobox = ctk.CTkComboBox(
             step4_frame,
@@ -665,31 +711,45 @@ class AnalisisFotoPage(ctk.CTkFrame):
                 "Brazo derecho", "Brazo izquierdo", "Pierna derecha", 
                 "Pierna izquierda", "Mano", "Pie", "Cuero cabelludo"
             ],
-            font=(self.textFont, 12),
+            font=(self.textFont, 14),
             width=200,
             state="readonly"
         )
-        self.localizacion_combobox.pack(pady=5, padx=10)
+        self.localizacion_combobox.pack(pady=10, padx=10, fill="x")
         self.localizacion_combobox.set("Seleccione localización")
         self.localizacion_combobox.bind("<<ComboboxSelected>>", self.actualizar_botones)
         
-        # Notas de la consulta
-        ctk.CTkLabel(step4_frame, text="Notas/Observaciones de la consulta:", 
-                   font=(self.textFont, 12)).pack(anchor="w", padx=10, pady=(10,0))
+        # Notas de la consulta (generales)
+        ctk.CTkLabel(step4_frame, text="Notas generales de la consulta:", 
+                   font=(self.textFont, 14)).pack(anchor="w", padx=10, pady=(15,0))
         
-        self.notas_text = ctk.CTkTextbox(
+        self.notas_consulta_text = ctk.CTkTextbox(
+            step4_frame,
+            height=60,
+            font=(self.textFont, 12)
+        )
+        self.notas_consulta_text.pack(pady=10, padx=10, fill="x")
+        self.notas_consulta_text.insert("1.0", "Ingrese notas generales de la consulta aquí...")
+        self.notas_consulta_text.bind("<FocusIn>", lambda e: self.borrar_placeholder_general())
+        self.notas_consulta_text.bind("<KeyRelease>", self.actualizar_botones)
+        
+        # Notas específicas de la imagen actual
+        ctk.CTkLabel(step4_frame, text="Notas específicas de esta imagen:", 
+                   font=(self.textFont, 14)).pack(anchor="w", padx=10, pady=(15,0))
+        
+        self.notas_imagen_text = ctk.CTkTextbox(
             step4_frame,
             height=80,
-            font=(self.textFont, 11)
+            font=(self.textFont, 12)
         )
-        self.notas_text.pack(pady=5, padx=10, fill="x")
-        self.notas_text.insert("1.0", "Ingrese observaciones adicionales aquí...")
-        self.notas_text.bind("<FocusIn>", self.borrar_placeholder)
-        self.notas_text.bind("<KeyRelease>", self.actualizar_botones)
+        self.notas_imagen_text.pack(pady=10, padx=10, fill="x")
+        self.notas_imagen_text.insert("1.0", "Ingrese notas específicas para esta imagen...")
+        self.notas_imagen_text.bind("<FocusIn>", lambda e: self.borrar_placeholder_imagen())
+        self.notas_imagen_text.bind("<KeyRelease>", self.actualizar_botones)
         
-        # BOTONES DE ACCIÓN - NUEVA LÓGICA
+        # BOTONES DE ACCIÓN
         botones_frame = ctk.CTkFrame(step4_frame)
-        botones_frame.pack(pady=10, padx=10, fill="x")
+        botones_frame.pack(fill="x", padx=10, pady=15)
         
         # Botón para guardar imagen actual
         self.guardar_imagen_btn = ctk.CTkButton(
@@ -698,9 +758,10 @@ class AnalisisFotoPage(ctk.CTkFrame):
             command=self.guardar_imagen_actual,
             state="disabled",
             font=(self.textFont, self.fontSize),
-            fg_color="#1f538d"
+            fg_color="#1f538d",
+            height=45
         )
-        self.guardar_imagen_btn.pack(pady=5, fill="x")
+        self.guardar_imagen_btn.pack(pady=8, fill="x")
         
         # Botón para finalizar consulta
         self.finalizar_consulta_btn = ctk.CTkButton(
@@ -709,31 +770,21 @@ class AnalisisFotoPage(ctk.CTkFrame):
             command=self.finalizar_consulta,
             state="disabled",
             font=(self.textFont, self.fontSize),
-            fg_color="green"
+            fg_color="green",
+            height=45
         )
-        self.finalizar_consulta_btn.pack(pady=5, fill="x")
+        self.finalizar_consulta_btn.pack(pady=8, fill="x")
         
-        # Información del modelo
-        info_frame = ctk.CTkFrame(main_container)
-        info_frame.pack(fill="x", padx=10, pady=5)
-        
-        ctk.CTkLabel(info_frame, text="ℹ️ Información del Modelo", 
-                   font=(self.textFont, 14, "bold")).pack(anchor="w", padx=10, pady=5)
-        
-        self.info_text = ctk.CTkTextbox(info_frame, height=80, font=("Consolas", 10))
-        self.info_text.pack(fill="x", padx=10, pady=5)
-        self.info_text.insert("1.0", "Cargue un modelo para ver la información...")
-        self.info_text.configure(state="disabled")
-        
-        # Botones de navegación
+        # Botones de navegación en la parte inferior
         btn_frame = ctk.CTkFrame(self)
-        btn_frame.pack(pady=10)
+        btn_frame.pack(fill="x", pady=10)
         
         ctk.CTkButton(
             btn_frame, 
             text="🔙 Volver al Inicio", 
             command=self.volver_inicio,
-            font=(self.textFont, self.fontSize)
+            font=(self.textFont, self.fontSize),
+            height=40
         ).pack(side="left", padx=10)
         
         ctk.CTkButton(
@@ -741,28 +792,33 @@ class AnalisisFotoPage(ctk.CTkFrame):
             text="Salir", 
             command=self.quit_app, 
             fg_color="red",
-            font=(self.textFont, self.fontSize)
+            font=(self.textFont, self.fontSize),
+            height=40
         ).pack(side="left", padx=10)
 
-    def borrar_placeholder(self, event):
-        """Borrar el texto placeholder cuando el usuario hace clic"""
-        if self.texto_placeholder_activo:
-            self.notas_text.delete("1.0", "end")
-            self.texto_placeholder_activo = False
+    def borrar_placeholder_general(self):
+        """Borrar placeholder de notas generales"""
+        if self.texto_placeholder_general:
+            self.notas_consulta_text.delete("1.0", "end")
+            self.texto_placeholder_general = False
+
+    def borrar_placeholder_imagen(self):
+        """Borrar placeholder de notas de imagen"""
+        if self.texto_placeholder_imagen:
+            self.notas_imagen_text.delete("1.0", "end")
+            self.texto_placeholder_imagen = False
 
     def actualizar_botones(self, event=None):
-        """Actualizar estado de los botones según las condiciones"""
+        """Actualizar estado de los botones"""
         tiene_modelo = self.model is not None
         localizacion_seleccionada = self.localizacion_combobox.get() != "Seleccione localización"
         tiene_imagen_analizada = self.image_path is not None
         
-        # Botón de guardar imagen: necesita modelo, localización e imagen analizada
         if tiene_modelo and localizacion_seleccionada and tiene_imagen_analizada:
             self.guardar_imagen_btn.configure(state="normal")
         else:
             self.guardar_imagen_btn.configure(state="disabled")
         
-        # Botón de finalizar consulta: necesita que la consulta esté iniciada
         if self.consulta_iniciada:
             self.finalizar_consulta_btn.configure(state="normal")
         else:
@@ -772,14 +828,14 @@ class AnalisisFotoPage(ctk.CTkFrame):
         """Crear una nueva consulta en la base de datos"""
         try:
             localizacion = self.localizacion_combobox.get()
-            notas = self.notas_text.get("1.0", "end-1c").strip()
-            if notas == "Ingrese observaciones adicionales aquí...":
-                notas = ""
+            notas_generales = self.notas_consulta_text.get("1.0", "end-1c").strip()
+            if notas_generales == "Ingrese notas generales de la consulta aquí...":
+                notas_generales = ""
             
             datos_consulta = {
                 'fecha_consulta': datetime.datetime.now().date(),
                 'localizacion': localizacion,
-                'notas_consulta': notas
+                'notas_consulta': notas_generales
             }
             
             self.id_consulta_actual = self.db.crear_consulta(self.paciente['id_paciente'], datos_consulta)
@@ -803,11 +859,15 @@ class AnalisisFotoPage(ctk.CTkFrame):
     def guardar_imagen_actual(self):
         """Guardar la imagen actual en la consulta"""
         if not self.consulta_iniciada:
-            # Si no hay consulta iniciada, crear una nueva
             if not self.crear_consulta():
                 return
         
         try:
+            # Obtener notas específicas de la imagen
+            notas_imagen = self.notas_imagen_text.get("1.0", "end-1c").strip()
+            if notas_imagen == "Ingrese notas específicas para esta imagen...":
+                notas_imagen = ""
+            
             # Preparar datos de la imagen
             imagen_data = {
                 'nombre_archivo': os.path.basename(self.image_path),
@@ -815,13 +875,14 @@ class AnalisisFotoPage(ctk.CTkFrame):
                 'tipo_imagen': os.path.splitext(self.image_path)[1][1:],
                 'probabilidad_melanoma': getattr(self, 'probabilidad_melanoma', 0.0),
                 'diagnostico_modelo': getattr(self, 'diagnostico_actual', 'Sin diagnóstico'),
-                'confianza': getattr(self, 'confianza_actual', 0.0)
+                'confianza': getattr(self, 'confianza_actual', 0.0),
+                'notas_imagen': notas_imagen  # Notas específicas de esta imagen
             }
             
             if self.db.agregar_imagen_a_consulta(self.id_consulta_actual, imagen_data):
                 messagebox.showinfo("Éxito", f"Imagen guardada en consulta #{self.id_consulta_actual}")
                 
-                # Limpiar campos para nueva imagen
+                # Limpiar campos para nueva imagen (solo los de imagen específica)
                 self.limpiar_campos_imagen()
                 
             else:
@@ -839,6 +900,10 @@ class AnalisisFotoPage(ctk.CTkFrame):
             text="Seleccione y analice una imagen para ver resultados",
             text_color="gray"
         )
+        # Limpiar solo las notas de imagen, mantener las generales
+        self.notas_imagen_text.delete("1.0", "end")
+        self.notas_imagen_text.insert("1.0", "Ingrese notas específicas para esta imagen...")
+        self.texto_placeholder_imagen = True
         self.actualizar_botones()
 
     def finalizar_consulta(self):
@@ -892,7 +957,6 @@ class AnalisisFotoPage(ctk.CTkFrame):
                 text_color="green"
             )
             self.image_btn.configure(state="normal")
-            self.actualizar_info()
             
         except Exception as e:
             raise Exception(f"Error al cargar el modelo: {str(e)}")
@@ -1005,23 +1069,6 @@ class AnalisisFotoPage(ctk.CTkFrame):
         except Exception as e:
             messagebox.showerror("Error", f"Ocurrió un error durante el análisis: {str(e)}")
 
-    def actualizar_info(self):
-        """Actualizar información del modelo en la interfaz"""
-        if self.model is None:
-            info = "Ningún modelo cargado"
-        else:
-            info = f"Framework: PyTorch\n"
-            info += f"Versión: {torch.__version__}\n"
-            info += f"Tarea: Clasificación binaria\n"
-            info += f"Arquitectura: CNN_Exacta (114-228-456-912)\n"
-            info += f"Archivo: {os.path.basename(self.model_path) if self.model_path else 'N/A'}\n"
-            info += f"Clases: 0=Melanoma, 1=No-melanoma"
-        
-        self.info_text.configure(state="normal")
-        self.info_text.delete("1.0", "end")
-        self.info_text.insert("1.0", info)
-        self.info_text.configure(state="disabled")
-
     def volver_inicio(self):
         """Volver a la pantalla de inicio - CORREGIDO"""
         if hasattr(self, 'app') and self.app:
@@ -1039,9 +1086,10 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         
-        self.title("🔬 Detector de Melanoma")
-        self.geometry("1000x800")
-        self.resizable(True, True)
+        # Configuración de ventana a pantalla completa
+        self.title("🔬 Detector de Melanoma - Sistema de Diagnóstico")
+        self.geometry("1200x800")
+        self.state('zoomed')  # Pantalla completa
         
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("dark-blue")
@@ -1055,9 +1103,9 @@ class App(ctk.CTk):
         self.inicio_page = InicioPage(self, self)
     
     def mostrar_analisis_page(self, paciente):
-        """Mostrar página de análisis - CORREGIDO: pasar self como app_instance"""
+        """Mostrar página de análisis"""
         self.limpiar_pantalla()
-        self.analisis_page = AnalisisFotoPage(self, paciente, self.db, self)  # CORREGIDO: agregar self
+        self.analisis_page = AnalisisFotoPage(self, paciente, self.db, self)
     
     def limpiar_pantalla(self):
         """Limpiar todos los widgets"""
