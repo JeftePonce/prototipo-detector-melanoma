@@ -1,0 +1,3 @@
+letterType = "Arial"
+letterSize = 12
+darkMode = 1

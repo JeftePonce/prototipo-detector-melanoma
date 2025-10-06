@@ -1,0 +1,7 @@
+- pip install customtkinter
+- pip install "numpy<2"
+- pip install torch torchvision
+- pip install Pillow
+- pip install psycopg2-binary
+- pip install tkcalendar
+- pip install python-dotenv 
