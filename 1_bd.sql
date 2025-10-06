@@ -33,6 +33,7 @@ CREATE TABLE consultas (
 CREATE TABLE imagenes (
     id_imagen SERIAL PRIMARY KEY,
     id_consulta INT NOT NULL,
+    notas_imagen TEXT,
     nombre_archivo VARCHAR(255) NOT NULL,
     ruta_almacenamiento VARCHAR(500) NOT NULL,
     fecha_captura TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
