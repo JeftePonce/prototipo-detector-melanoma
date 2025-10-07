@@ -1,0 +1,13 @@
+- Framework: PyTorch.
+- Versión del framework: PyTorch 2.5.1 (Torchvision 0.20.1).
+- Versión de Python: 3.11.15.
+- Formato del archivo de modelo: se guarda como .pth.
+- Arquitectura: CNN personalizada con bloques conv 3×3 (padding=1) + ReLU + MaxPool 2×2, FC(1024) + Dropout 0.5 + FC(2) y Log-Softmax en la salida.
+- Preprocesamiento / entrada esperada:
+  - Tamaño: 224×224 píxeles.
+  - Color: RGB (dermatoscópicas).
+  - Aumentos: flips H/V, recorte con shear, variación de zoom, brillo, rotación ±15°, y remoción de vello (top-hat + morfología).
+- Tipo de tarea: Clasificación.
+- Número de clases: 2 (binaria).
+- Nombre de las clases: Melanoma y No-melanoma.
+- ¿Probabilidades o logits?: la capa de salida aplica Log-Softmax ⇒ el modelo produce log-probabilidades.
