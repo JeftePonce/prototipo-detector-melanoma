@@ -709,7 +709,7 @@ class AnalisisFotoPage(ctk.CTkFrame):
             values=[
                 "Rostro", "Cuello", "Espalda", "Pecho", "Abdomen",
                 "Brazo derecho", "Brazo izquierdo", "Pierna derecha", 
-                "Pierna izquierda", "Mano", "Pie", "Cuero cabelludo"
+                "Pierna izquierda", "Mano derecha", "Mano izquierda", "Pie derecho", "Pie izquierdo", "Cuero cabelludo"
             ],
             font=(self.textFont, 14),
             width=200,
