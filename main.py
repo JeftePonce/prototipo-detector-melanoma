@@ -1,7 +1,8 @@
 import multiprocessing
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
-from PIL import Image
+# Importar LANCZOS para redimensionar con alta calidad
+from PIL import Image, ImageFilter 
 import os
 import torch
 import torchvision.transforms as transforms
@@ -287,17 +288,76 @@ class InicioPage(ctk.CTkFrame):
                         img_frame = ctk.CTkFrame(consulta_frame, fg_color="#3b3b3b")
                         img_frame.pack(fill="x", padx=25, pady=5)
                         
-                        img_text = f"  📷 {img['nombre_archivo']} - Diagnóstico: {img['diagnostico']} (Confianza: {img['confianza']:.2%})"
-                        if img['notas_imagen']:
-                            img_text += f"\n     📝 Notas: {img['notas_imagen']}"
+                        # Configurar grid: Col 0 para imagen (fija), Col 1 para texto (expansible)
+                        img_frame.grid_columnconfigure(0, weight=0, minsize=110) # Espacio para miniatura 100x100 + padding
+                        img_frame.grid_columnconfigure(1, weight=1)
+
+                        # --- Cargar y mostrar la imagen ---
+                        try:
+                            # 1. Construir la ruta (¡AHORA SÍ FUNCIONA!)
+                            img_path = os.path.join(img['ruta_almacenamiento'], img['nombre_archivo'])
+                            
+                            if os.path.exists(img_path):
+                                # 2. Abrir con PIL y crear miniatura
+                                pil_image = Image.open(img_path)
+                                pil_image.thumbnail((100, 100)) # Tamaño de la miniatura
+                                
+                                # 3. Convertir a CTkImage
+                                ctk_img = ctk.CTkImage(
+                                    light_image=pil_image, 
+                                    dark_image=pil_image, 
+                                    size=pil_image.size
+                                )
+                                
+                                # --- INICIO DE LA MODIFICACIÓN (Añadir cursor y clic) ---
+                                
+                                # 4. Crear label para la imagen
+                                img_label = ctk.CTkLabel(
+                                    img_frame, 
+                                    text="", 
+                                    image=ctk_img, 
+                                    cursor="hand2" # <--- CAMBIO 1: Añadir cursor de mano
+                                )
+                                img_label.grid(row=0, column=0, padx=10, pady=10)
+                                # 5. Guardar referencia (IMPORTANTE para que CTk no la borre)
+                                img_label.image = ctk_img
+                                
+                                # 6. Añadir el evento click
+                                img_label.bind(
+                                    "<Button-1>", 
+                                    lambda e, path=img_path: self.mostrar_imagen_grande(path) # <--- CAMBIO 2: Añadir BIND
+                                )
+                                
+                                # --- FIN DE LA MODIFICACIÓN ---
+                            
+                            else:
+                                # Si no se encuentra el archivo
+                                error_label = ctk.CTkLabel(img_frame, text="[Imagen\nno encontrada]", font=("Arial", 10, "italic"), text_color="gray")
+                                error_label.grid(row=0, column=0, padx=10, pady=10)
+                                
+                        except Exception as e:
+                            print(f"Error al cargar imagen del historial: {e}")
+                            error_label = ctk.CTkLabel(img_frame, text="[Error al\ncargar img]", font=("Arial", 10, "italic"), text_color="red")
+                            error_label.grid(row=0, column=0, padx=10, pady=10)
                         
-                        ctk.CTkLabel(
+                        
+                        # --- Mostrar el texto (ahora en la columna 1) ---
+                        confianza_color = "red" if img['diagnostico'] == "MELANOMA" else "green"
+                        
+                        img_text = f"📷 {img['nombre_archivo']}\n"
+                        img_text += f"     Diagnóstico: {img['diagnostico']} (Confianza: {img['confianza']:.2%})\n"
+                        if img['notas_imagen']:
+                            img_text += f"     📝 Notas: {img['notas_imagen']}"
+                        
+                        text_label = ctk.CTkLabel(
                             img_frame,
                             text=img_text,
                             font=("Arial", 12),
-                            wraplength=900,
+                            wraplength=850, # Ajustar wraplength al nuevo espacio
                             justify="left"
-                        ).pack(anchor="w", padx=15, pady=8)
+                        )
+                        text_label.grid(row=0, column=1, padx=(5, 15), pady=8, sticky="w")
+                
                 else:
                     ctk.CTkLabel(
                         consulta_frame,
@@ -431,6 +491,61 @@ class InicioPage(ctk.CTkFrame):
         self.registro_status = ctk.CTkLabel(form_frame, text="", font=("Arial", 12))
         self.registro_status.pack(pady=10)
     
+    # --- INICIO DE LA NUEVA FUNCIÓN ---
+    
+    def mostrar_imagen_grande(self, img_path):
+        """Abrir una ventana Toplevel para mostrar la imagen en grande."""
+        try:
+            if not os.path.exists(img_path):
+                messagebox.showerror("Error", "No se pudo encontrar el archivo de imagen.")
+                return
+            
+            # 1. Crear ventana Toplevel
+            top = ctk.CTkToplevel(self)
+            top.title(os.path.basename(img_path))
+            top.attributes("-topmost", True) # Ponerla al frente
+
+            # 2. Obtener dimensiones de la pantalla y calcular tamaño máximo
+            screen_width = self.winfo_screenwidth()
+            screen_height = self.winfo_screenheight()
+            
+            # Dejar un 10% de margen
+            max_width = int(screen_width * 0.9)
+            max_height = int(screen_height * 0.9)
+
+            # 3. Cargar y redimensionar imagen con PIL
+            pil_image = Image.open(img_path)
+            
+            # Usar thumbnail para redimensionar proporcionalmente
+            pil_image.thumbnail((max_width, max_height), Image.LANCZOS)
+            
+            # 4. Convertir a CTkImage
+            ctk_img = ctk.CTkImage(
+                light_image=pil_image, 
+                dark_image=pil_image, 
+                size=pil_image.size
+            )
+            
+            # 5. Mostrar en un Label
+            img_label = ctk.CTkLabel(top, text="", image=ctk_img)
+            img_label.pack(padx=20, pady=20)
+            
+            # 6. Guardar referencia
+            img_label.image = ctk_img
+            
+            # 7. Botón para cerrar
+            close_btn = ctk.CTkButton(top, text="Cerrar", command=top.destroy, fg_color="red")
+            close_btn.pack(pady=(0, 20))
+
+            # 8. Hacer que la ventana sea modal y esperar
+            top.grab_set() # Bloquear interacción con la ventana principal
+            top.wait_window() # Esperar hasta que se cierre
+
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo cargar la imagen: {e}")
+            
+    # --- FIN DE LA NUEVA FUNCIÓN ---
+
     def borrar_placeholder_telefono(self, campo):
         """Borrar el placeholder del teléfono cuando se hace clic"""
         if self.placeholder_activo.get(campo, False):
@@ -1003,9 +1118,14 @@ class AnalisisFotoPage(ctk.CTkFrame):
         try:
             img = Image.open(image_path)
             self.current_image = img.copy()
-            img.thumbnail((180, 180))
+            
+            # --- Corrección vista previa ---
+            # Usar thumbnail para mantener relación de aspecto dentro de 250x250
+            img.thumbnail((250, 250), Image.LANCZOS) 
+            
             ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size=img.size)
             self.preview_label.configure(image=ctk_img, text="")
+            self.preview_label.image = ctk_img # Guardar referencia
         except Exception as e:
             self.preview_label.configure(text="❌ Error en vista previa", text_color="red")
 
@@ -1032,8 +1152,9 @@ class AnalisisFotoPage(ctk.CTkFrame):
             probabilities = torch.softmax(output, dim=1).cpu().numpy()[0]
             predicted_class = np.argmax(probabilities)
             
+            # --- Corrección de vista previa post-análisis ---
             img_display = image.copy()
-            img_display.thumbnail((300, 300))
+            img_display.thumbnail((250, 250), Image.LANCZOS) # Usar thumbnail también aquí
             ctk_img = ctk.CTkImage(light_image=img_display, dark_image=img_display, size=img_display.size)
             
             self.preview_label.configure(image=ctk_img)
@@ -1041,21 +1162,21 @@ class AnalisisFotoPage(ctk.CTkFrame):
             
             if predicted_class == 0:
                 result_text = "MELANOMA DETECTADO"
-                confidence = probabilities[0] * 100
+                confidence = probabilities[0]
                 color = "red"
                 self.probabilidad_melanoma = float(probabilities[0])
                 self.diagnostico_actual = "MELANOMA"
             else:
                 result_text = "NO-MELANOMA"
-                confidence = probabilities[1] * 100
+                confidence = probabilities[1]
                 color = "green"
                 self.probabilidad_melanoma = float(probabilities[0])
                 self.diagnostico_actual = "NO-MELANOMA"
             
-            self.confianza_actual = float(max(probabilities))
+            self.confianza_actual = float(confidence)
             
             self.result_label.configure(
-                text=f"{result_text}\nProbabilidad: {confidence:.2f}%",
+                text=f"{result_text}\nConfianza: {confidence:.2%}", # Formato de porcentaje
                 text_color=color,
                 font=(self.textFont, 16, "bold")
             )
@@ -1064,7 +1185,7 @@ class AnalisisFotoPage(ctk.CTkFrame):
             self.actualizar_botones()
             
             messagebox.showinfo("Análisis completado", 
-                              f"Resultado: {result_text}\nConfianza: {confidence:.2f}%\n\nAhora puede guardar la imagen en la consulta.")
+                              f"Resultado: {result_text}\nConfianza: {confidence:.2%}\n\nAhora puede guardar la imagen en la consulta.")
             
         except Exception as e:
             messagebox.showerror("Error", f"Ocurrió un error durante el análisis: {str(e)}")
@@ -1114,5 +1235,15 @@ class App(ctk.CTk):
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
+    
+    # --- CAMBIO DE ANTIALIASING EN PIL ---
+    # Corrección para versiones modernas de Pillow (Pillow 10+)
+    # Si usas Pillow 9 o anterior, puedes borrar estas líneas.
+    try:
+        Image.LANCZOS = Image.Resampling.LANCZOS
+    except AttributeError:
+        # Si Image.Resampling no existe, usa la versión antigua (Pillow < 10)
+        pass 
+    
     app = App()
     app.mainloop()
